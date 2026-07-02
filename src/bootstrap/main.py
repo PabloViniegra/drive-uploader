@@ -8,6 +8,9 @@ from src.shared.paths import config_dir
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "--version":
+        print(f"drive-uploader {CURRENT_VERSION}")
+        return
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",

@@ -24,4 +24,5 @@ dev = [
     "pytest>=9.1.1",
     "ruff>=0.15.20",
     "import-linter>=2.0",
+    "pyinstaller>=6.10.0",
 ]
