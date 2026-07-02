@@ -20,12 +20,14 @@ A durable, fault-tolerant Google Drive uploader. Watches a local folder, syncs n
 - [Features](#features)
 - [Architecture](#architecture)
 - [Requirements](#requirements)
-- [Installation](#installation)
+- [Installing the binary](#installing-the-binary)
+- [Installing from source](#installing-from-source)
 - [Configuration](#configuration)
 - [Usage](#usage)
 - [Development](#development)
 - [Project Layout](#project-layout)
 - [Testing](#testing)
+- [Out of scope](#out-of-scope)
 - [License](#license)
 
 ## Overview
@@ -66,12 +68,94 @@ Dependency direction: `infrastructure` and `bootstrap` -> `application` -> `doma
 
 ## Requirements
 
-- Python 3.11 or newer
-- [`uv`](https://github.com/astral-sh/uv) as the package manager
+End-user install (binary):
+
 - A Google Cloud Service Account with the Drive API enabled, plus its JSON credentials file
 - A target Google Drive folder (you need its folder ID)
+- Windows 10/11 or a modern Linux distribution
 
-## Installation
+Developer install (from source): see [Installing from source](#installing-from-source).
+
+## Installing the binary
+
+Download the latest release for your operating system from the
+[GitHub Releases page](https://github.com/PabloViniegra/drive-uploader/releases/latest).
+Each release attaches two binaries plus a `SHA256SUMS` checksum file:
+
+| Asset | Platform |
+|---|---|
+| `drive-uploader-vX.Y.Z-linux-amd64` | Linux (x86_64) |
+| `drive-uploader-vX.Y.Z-windows-amd64.exe` | Windows (x86_64) |
+| `SHA256SUMS` | both |
+
+### Verify the download
+
+```bash
+# Linux
+sha256sum -c SHA256SUMS
+
+# Windows (PowerShell)
+Get-FileHash .\drive-uploader-vX.Y.Z-windows-amd64.exe -Algorithm SHA256
+```
+
+Compare the printed digest against the one in `SHA256SUMS` for your
+asset. Abort if they do not match.
+
+### Run it
+
+**Windows.** Double-click the `.exe`. Windows SmartScreen may show a
+"Windows protected your PC" warning because the binary is not
+code-signed — click **More info**, then **Run anyway**. This warning
+is expected for v1; see [Out of scope](#out-of-scope) below.
+
+**Linux.** From a terminal:
+
+```bash
+chmod +x drive-uploader-vX.Y.Z-linux-amd64
+./drive-uploader-vX.Y.Z-linux-amd64
+```
+
+### First-run setup
+
+The first time you run the binary it detects an empty config directory
+and walks you through an interactive wizard that asks for:
+
+1. The **watch folder** path (must exist; the wizard retries on bad input)
+2. The **Drive folder ID** (non-empty string)
+3. The **Google credentials file** path (must exist)
+
+Settings are persisted to a `.env` file in a per-user config directory:
+
+| OS | Config directory |
+|---|---|
+| Windows | `%APPDATA%\DriveUploader\` |
+| Linux | `$XDG_CONFIG_HOME/drive-uploader/` (falls back to `~/.config/drive-uploader/`) |
+
+The same directory holds `token.json` (OAuth token, managed by the
+auth library) and `drive_uploader.db` (SQLite queue).
+
+Subsequent runs skip the wizard and start the service directly. If
+stdin is not a terminal (e.g. you launched the binary from a
+shortcut or a script), the wizard refuses with a friendly error
+explaining how to create `.env` by hand — set the three required
+variables (`WATCH_FOLDER`, `DRIVE_FOLDER_ID`, `GOOGLE_CREDENTIALS`)
+and run the binary again.
+
+The service runs in the foreground; logs print to the console. Stop
+with `Ctrl+C`. SIGINT and SIGTERM are handled gracefully.
+
+A best-effort check for newer releases prints a one-liner on startup
+when a newer tag exists. It never blocks startup and never fails
+loudly.
+
+### Updating
+
+Re-download the newer binary from the Releases page and replace the
+old file. There is no auto-update in v1.
+
+## Installing from source
+
+For development or to run the service without a pre-built binary:
 
 ```bash
 git clone <your-fork-url> drive-uploader
@@ -79,11 +163,16 @@ cd drive-uploader
 make install
 ```
 
-`make install` runs `uv sync`, which creates the virtual environment and installs runtime and development dependencies.
+`make install` runs `uv sync`, which creates the virtual environment
+and installs runtime and development dependencies. You will need
+Python 3.11 or newer and [`uv`](https://github.com/astral-sh/uv)
+on your machine.
 
 ## Configuration
 
-All settings come from environment variables. Copy `.env.example` to `.env` and edit the values:
+All settings come from environment variables. Copy `.env.example` to
+`.env` and edit the values, or use the first-run wizard described
+above.
 
 ```env
 WATCH_FOLDER=/absolute/path/to/watch
@@ -97,9 +186,28 @@ GOOGLE_CREDENTIALS=/absolute/path/to/service-account.json
 | `DRIVE_FOLDER_ID` | yes | — | ID of the target Google Drive folder. |
 | `GOOGLE_CREDENTIALS` | yes | — | Path to a Service Account JSON file. |
 | `WORKERS` | no | `4` | Thread-pool size for parallel uploads. |
-| `DATABASE` | no | `./drive_uploader.db` | Path to the SQLite queue file. |
+| `DATABASE` | no | `<config-dir>/drive_uploader.db` | Path to the SQLite queue file. |
+| `GOOGLE_TOKEN_PATH` | no | `<config-dir>/token.json` | Path to the OAuth token file. |
 | `RETRY_ATTEMPTS` | no | `3` | Maximum retry attempts per job before marking it `FAILED`. |
 | `DELETE_AFTER_UPLOAD` | no | `false` | Delete the local file after a successful upload. |
+| `SHUTDOWN_GRACE_PERIOD` | no | `5.0` | Seconds the dispatcher waits for in-flight jobs on shutdown. |
+
+When running from source, defaults resolve to `./drive_uploader.db`
+and `./token.json` relative to the current working directory.
+When running from the binary, defaults resolve to the per-user
+config directory.
+
+## Out of scope
+
+The following are deferred from the v1 binary distribution:
+
+- **Code signing.** Windows SmartScreen will warn on first launch.
+  See the [Run it](#run-it) section for the workaround.
+- **Package-manager distribution** (winget, scoop, apt). v1 ships
+  via GitHub Releases only.
+- **Auto-update.** Re-download from the Releases page to upgrade.
+- **GUI / system tray icon / auto-start on login.** The binary is a
+  foreground terminal process started manually.
 
 ## Usage
 

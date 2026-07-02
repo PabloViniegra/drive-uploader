@@ -7,3 +7,4 @@ When a decision supersedes a prior one, the older ADR's status is moved to `Supe
 | # | Title | Status | Date |
 |---|---|---|---|
 | [001](001-hexagonal-ports-and-adapters.md) | Hexagonal / Ports & Adapters | Accepted | 2026-07-02 |
+| [002](002-binary-distribution.md) | Binary distribution for end-user install | Accepted | 2026-07-03 |

@@ -1,0 +1,81 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Build binary
+        run: uv run pyinstaller drive-uploader.spec
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: drive-uploader-${{ runner.os }}
+          path: |
+            dist/drive-uploader
+            dist/drive-uploader.exe
+
+  release:
+    name: Publish release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Rename binaries and compute SHA256
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          set -e
+          cd artifacts
+          if [ -f drive-uploader-Linux/drive-uploader ]; then
+            mv drive-uploader-Linux/drive-uploader "drive-uploader-${VERSION}-linux-amd64"
+          fi
+          if [ -f drive-uploader-Windows/drive-uploader.exe ]; then
+            mv drive-uploader-Windows/drive-uploader.exe "drive-uploader-${VERSION}-windows-amd64.exe"
+          fi
+          sha256sum drive-uploader-${VERSION}-* > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/drive-uploader-${{ github.ref_name }}-linux-amd64
+            artifacts/drive-uploader-${{ github.ref_name }}-windows-amd64.exe
+            artifacts/SHA256SUMS
+          fail_on_unmatched_files: false

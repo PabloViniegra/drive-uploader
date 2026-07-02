@@ -6,6 +6,9 @@ build/
 dist/
 wheels/
 
+# Track the PyInstaller runtime hook used by drive-uploader.spec.
+!build/runtime_hook.py
+
 # Virtual environment
 .venv/
 
