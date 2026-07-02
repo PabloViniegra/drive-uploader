@@ -34,3 +34,7 @@ htmlcov/
 # OS metadata
 .DS_Store
 Thumbs.db
+
+# AI
+opencode.json
+.mcp.json
