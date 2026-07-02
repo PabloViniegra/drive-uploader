@@ -1,5 +1,5 @@
-from application.use_cases.enqueue_file import EnqueueFile
-from domain.value_objects.upload_status import UploadStatus
+from src.application.use_cases.enqueue_file import EnqueueFile
+from src.domain.value_objects.upload_status import UploadStatus
 
 from conftest import InMemoryQueueRepository
 

@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Protocol
 
-from domain.entities.upload_job import UploadJob
+from src.domain.entities.upload_job import UploadJob
 
 
 class QueueRepositoryPort(Protocol):

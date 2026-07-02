@@ -1,0 +1,26 @@
+[importlinter]
+root_package = src
+
+[importlinter:contract:core-knows-no-adapters]
+name = Domain and application must not depend on adapters or bootstrap
+type = forbidden
+source_modules =
+    src.domain
+    src.application
+forbidden_modules =
+    src.infrastructure
+    src.bootstrap
+
+[importlinter:contract:adapters-dont-reach-into-each-other]
+name = Adapter families do not import one another
+type = forbidden
+source_modules =
+    src.infrastructure.drive
+    src.infrastructure.filesystem
+    src.infrastructure.persistence
+    src.infrastructure.threading
+forbidden_modules =
+    src.infrastructure.drive
+    src.infrastructure.filesystem
+    src.infrastructure.persistence
+    src.infrastructure.threading

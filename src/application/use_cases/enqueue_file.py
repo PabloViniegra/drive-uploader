@@ -1,9 +1,9 @@
 import logging
 from pathlib import Path
 
-from domain.entities.upload_job import UploadJob
-from domain.ports.queue_repository import QueueRepositoryPort
-from domain.value_objects.upload_status import UploadStatus
+from src.domain.entities.upload_job import UploadJob
+from src.domain.ports.queue_repository import QueueRepositoryPort
+from src.domain.value_objects.upload_status import UploadStatus
 
 logger = logging.getLogger(__name__)
 

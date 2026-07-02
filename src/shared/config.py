@@ -13,6 +13,7 @@ class Settings:
     database: Path
     retry_attempts: int
     delete_after_upload: bool
+    shutdown_grace_period: float
 
 
 def load_settings() -> Settings:
@@ -32,4 +33,5 @@ def load_settings() -> Settings:
         database=Path(os.environ.get("DATABASE", "./drive_uploader.db")),
         retry_attempts=int(os.environ.get("RETRY_ATTEMPTS", "3")),
         delete_after_upload=os.environ.get("DELETE_AFTER_UPLOAD", "false").lower() == "true",
+        shutdown_grace_period=float(os.environ.get("SHUTDOWN_GRACE_PERIOD", "5.0")),
     )

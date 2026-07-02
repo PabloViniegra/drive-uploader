@@ -1,7 +1,7 @@
 import logging
 
-from bootstrap.dependency_container import DependencyContainer
-from shared.config import load_settings
+from src.bootstrap.dependency_container import DependencyContainer
+from src.shared.config import load_settings
 
 
 def main() -> None:

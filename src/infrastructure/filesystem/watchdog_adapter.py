@@ -6,7 +6,7 @@ from threading import Thread
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-from application.use_cases.enqueue_file import EnqueueFile
+from src.domain.ports.on_file_detected import OnFileDetectedPort
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +19,8 @@ class _StableFileHandler(FileSystemEventHandler):
     Guards against picking up a file that's still being written/copied.
     """
 
-    def __init__(self, enqueue_file: EnqueueFile) -> None:
-        self._enqueue_file = enqueue_file
+    def __init__(self, on_file_detected: OnFileDetectedPort) -> None:
+        self._on_file_detected = on_file_detected
 
     def on_created(self, event):
         if not event.is_directory:
@@ -44,27 +44,27 @@ class _StableFileHandler(FileSystemEventHandler):
             time.sleep(_STABLE_CHECK_INTERVAL)
         if path.exists():
             logger.info("file stable, enqueueing: %s", path)
-            self._enqueue_file.execute(path)
+            self._on_file_detected.execute(path)
         else:
             logger.warning("file disappeared before stabilizing: %s", path)
 
 
 class FolderWatcher:
-    """Watches a folder and enqueues new files for upload."""
+    """Watches a folder and notifies the OnFileDetectedPort for each new file."""
 
-    def __init__(self, watch_folder: Path, enqueue_file: EnqueueFile) -> None:
+    def __init__(self, watch_folder: Path, on_file_detected: OnFileDetectedPort) -> None:
         self._watch_folder = watch_folder
-        self._enqueue_file = enqueue_file
+        self._on_file_detected = on_file_detected
         self._observer = Observer()
 
     def scan_existing(self) -> None:
         found = [path for path in self._watch_folder.iterdir() if path.is_file()]
         logger.info("startup scan: found %d existing file(s) in %s", len(found), self._watch_folder)
         for path in found:
-            self._enqueue_file.execute(path)
+            self._on_file_detected.execute(path)
 
     def start(self) -> None:
-        handler = _StableFileHandler(self._enqueue_file)
+        handler = _StableFileHandler(self._on_file_detected)
         self._observer.schedule(handler, str(self._watch_folder), recursive=False)
         self._observer.start()
         logger.info("watcher started on %s", self._watch_folder)

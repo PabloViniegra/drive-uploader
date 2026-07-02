@@ -8,7 +8,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-from domain.entities.upload_job import UploadJob
+from src.domain.entities.upload_job import UploadJob
 
 logger = logging.getLogger(__name__)
 

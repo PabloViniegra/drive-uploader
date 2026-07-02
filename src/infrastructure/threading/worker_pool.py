@@ -1,16 +1,18 @@
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any
+
+from src.domain.entities.upload_job import UploadJob
 
 
 class WorkerPool:
-    """Thin wrapper over ThreadPoolExecutor: the in-memory work queue."""
+    """ThreadPoolExecutor-backed implementation of UploadDispatcherPort."""
 
-    def __init__(self, max_workers: int) -> None:
+    def __init__(self, max_workers: int, job_handler: Callable[[UploadJob], None]) -> None:
         self._executor = ThreadPoolExecutor(max_workers=max_workers)
+        self._job_handler = job_handler
 
-    def submit(self, fn: Callable[..., Any], *args: Any) -> None:
-        self._executor.submit(fn, *args)
+    def process(self, job: UploadJob) -> None:
+        self._executor.submit(self._job_handler, job)
 
-    def shutdown(self, wait: bool = True) -> None:
-        self._executor.shutdown(wait=wait)
+    def shutdown(self, wait: bool = True, cancel_futures: bool = False) -> None:
+        self._executor.shutdown(wait=wait, cancel_futures=cancel_futures)

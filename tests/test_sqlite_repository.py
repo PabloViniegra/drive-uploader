@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from domain.entities.upload_job import UploadJob
-from domain.value_objects.upload_status import UploadStatus
-from infrastructure.persistence.sqlite_repository import SqliteQueueRepository
+from src.domain.entities.upload_job import UploadJob
+from src.domain.value_objects.upload_status import UploadStatus
+from src.infrastructure.persistence.sqlite_repository import SqliteQueueRepository
 
 
 def _job(path: Path) -> UploadJob:

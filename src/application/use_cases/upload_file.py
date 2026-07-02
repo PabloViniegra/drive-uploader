@@ -1,11 +1,11 @@
 import logging
 import time
 
-from domain.entities.upload_job import UploadJob
-from domain.ports.drive_uploader import DriveUploaderPort
-from domain.ports.queue_repository import QueueRepositoryPort
-from domain.value_objects.upload_status import UploadStatus
-from shared.config import Settings
+from src.domain.entities.upload_job import UploadJob
+from src.domain.ports.drive_uploader import DriveUploaderPort
+from src.domain.ports.queue_repository import QueueRepositoryPort
+from src.domain.value_objects.upload_status import UploadStatus
+from src.shared.config import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +32,11 @@ class UploadFile:
             return
 
         job.status = UploadStatus.DONE
+        self._repository.update(job)
         logger.info("uploaded %s -> drive id %s", job.file_path, remote_id)
         if self._settings.delete_after_upload:
             job.file_path.unlink(missing_ok=True)
             logger.info("deleted local file after upload: %s", job.file_path)
-        self._repository.update(job)
 
     def _handle_failure(self, job: UploadJob, exc: Exception) -> None:
         job.retries += 1

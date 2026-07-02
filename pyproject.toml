@@ -17,10 +17,11 @@ dependencies = [
 line-length = 100
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = [".", "src"]
 
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
     "ruff>=0.15.20",
+    "import-linter>=2.0",
 ]

@@ -1,9 +1,9 @@
 from pathlib import Path
 
-from application.use_cases.upload_file import UploadFile
-from domain.entities.upload_job import UploadJob
-from domain.value_objects.upload_status import UploadStatus
-from shared.config import Settings
+from src.application.use_cases.upload_file import UploadFile
+from src.domain.entities.upload_job import UploadJob
+from src.domain.value_objects.upload_status import UploadStatus
+from src.shared.config import Settings
 
 from conftest import FakeUploader, InMemoryQueueRepository
 
@@ -18,6 +18,7 @@ def _settings(**overrides) -> Settings:
         database=Path("/tmp/db.sqlite"),
         retry_attempts=3,
         delete_after_upload=False,
+        shutdown_grace_period=5.0,
     )
     base.update(overrides)
     return Settings(**base)
