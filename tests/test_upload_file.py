@@ -65,3 +65,67 @@ def test_delete_after_upload_removes_file(tmp_path):
     UploadFile(repo, FakeUploader(), _settings(delete_after_upload=True)).execute(job)
 
     assert not file_path.exists()
+
+
+def test_transient_failure_then_recovers_to_done(tmp_path, monkeypatch):
+    monkeypatch.setattr("src.application.use_cases.upload_file.time.sleep", lambda _: None)
+    file_path = tmp_path / "file.txt"
+    file_path.write_text("hello")
+    job = UploadJob(file_path=file_path, file_size=5, status=UploadStatus.UPLOADING)
+    repo = InMemoryQueueRepository()
+    repo.add(job)
+    upload_file = UploadFile(repo, FakeUploader(fail_times=1), _settings(retry_attempts=3))
+
+    upload_file.execute(job)
+    assert repo.jobs[job.id].status == UploadStatus.WAITING
+    assert repo.jobs[job.id].error is not None
+
+    upload_file.execute(job)
+    assert repo.jobs[job.id].status == UploadStatus.DONE
+
+
+def test_failed_upload_does_not_delete_local_file(tmp_path, monkeypatch):
+    monkeypatch.setattr("src.application.use_cases.upload_file.time.sleep", lambda _: None)
+    file_path = tmp_path / "file.txt"
+    file_path.write_text("hello")
+    job = UploadJob(file_path=file_path, file_size=5, status=UploadStatus.UPLOADING)
+    repo = InMemoryQueueRepository()
+    repo.add(job)
+
+    UploadFile(repo, FakeUploader(fail_times=99), _settings(delete_after_upload=True)).execute(job)
+
+    assert file_path.exists()
+
+
+def test_backoff_grows_exponentially_with_retries(tmp_path, monkeypatch):
+    slept: list[float] = []
+    monkeypatch.setattr(
+        "src.application.use_cases.upload_file.time.sleep", lambda secs: slept.append(secs)
+    )
+    file_path = tmp_path / "file.txt"
+    file_path.write_text("hello")
+    job = UploadJob(file_path=file_path, file_size=5, status=UploadStatus.UPLOADING)
+    repo = InMemoryQueueRepository()
+    repo.add(job)
+    upload_file = UploadFile(repo, FakeUploader(fail_times=99), _settings(retry_attempts=4))
+
+    upload_file.execute(job)
+    upload_file.execute(job)
+    upload_file.execute(job)
+
+    assert slept == [2, 4, 8]
+
+
+def test_permanent_failure_records_last_error(tmp_path, monkeypatch):
+    monkeypatch.setattr("src.application.use_cases.upload_file.time.sleep", lambda _: None)
+    file_path = tmp_path / "file.txt"
+    file_path.write_text("hello")
+    job = UploadJob(file_path=file_path, file_size=5, status=UploadStatus.UPLOADING)
+    repo = InMemoryQueueRepository()
+    repo.add(job)
+
+    UploadFile(repo, FakeUploader(fail_times=99), _settings(retry_attempts=1)).execute(job)
+
+    stored = repo.jobs[job.id]
+    assert stored.status == UploadStatus.FAILED
+    assert "simulated failure" in stored.error

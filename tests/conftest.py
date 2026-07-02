@@ -45,3 +45,19 @@ class FakeUploader:
             raise RuntimeError("simulated failure")
         self.uploaded.append(job)
         return "fake-remote-id"
+
+
+class FakeDispatcher:
+    def __init__(self) -> None:
+        self.processed: list[UploadJob] = []
+
+    def process(self, job: UploadJob) -> None:
+        self.processed.append(job)
+
+
+class RecordingOnFileDetected:
+    def __init__(self) -> None:
+        self.paths: list = []
+
+    def execute(self, file_path) -> None:
+        self.paths.append(file_path)
