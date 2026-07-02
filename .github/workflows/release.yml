@@ -28,10 +28,6 @@ jobs:
       - name: Install uv
         run: pip install uv
 
-      - name: Install libpython (Linux)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libpython3.11
-
       - name: Sync dependencies
         run: uv sync
 
