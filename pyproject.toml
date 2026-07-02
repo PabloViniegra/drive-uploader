@@ -1,0 +1,26 @@
+[project]
+name = "drive-uploader"
+version = "0.1.0"
+description = "Internal Google Drive uploader"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "google-api-python-client>=2.198.0",
+    "google-auth>=2.55.1",
+    "google-auth-oauthlib>=1.2.0",
+    "watchdog>=6.0.0",
+]
+
+[tool.uv]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.15.20",
+]
