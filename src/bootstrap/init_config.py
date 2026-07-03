@@ -25,6 +25,25 @@ def _prompt_until_valid(
         write(f"  {error_msg}\n")
 
 
+def _prompt_optional_bool(
+    label: str,
+    default: bool,
+    read_line: Callable[[], str],
+    write: Callable[[str], None],
+) -> bool:
+    suffix = "Y/n" if default else "y/N"
+    while True:
+        write(f"{label}? [{suffix}]: ")
+        value = read_line().strip().lower()
+        if value == "":
+            return default
+        if value in ("y", "yes"):
+            return True
+        if value in ("n", "no"):
+            return False
+        write("  Please answer y or n.\n")
+
+
 def run_wizard(
     input_stream: TextIO,
     output_stream: TextIO,
@@ -45,7 +64,7 @@ def run_wizard(
     def read_line() -> str:
         return input_stream.readline().rstrip("\n")
 
-    write("First-run setup. Enter the required settings:\n")
+    write("First-run setup. Enter the settings:\n")
 
     watch_folder = _prompt_until_valid(
         "Watch folder path",
@@ -71,11 +90,20 @@ def run_wizard(
         "Path does not exist or is not a file. Try again.",
     )
 
+    delete_after_upload = _prompt_optional_bool(
+        "Delete files after upload",
+        False,
+        read_line,
+        write,
+    )
+
     env_content = (
         f"WATCH_FOLDER={watch_folder}\n"
         f"DRIVE_FOLDER_ID={drive_folder_id}\n"
         f"GOOGLE_CREDENTIALS={credentials_path}\n"
     )
+    if delete_after_upload:
+        env_content += "DELETE_AFTER_UPLOAD=true\n"
     env_file = config_dir_path / ".env"
     env_file.write_text(env_content, encoding="utf-8")
     write(f"Wrote {env_file}\n")

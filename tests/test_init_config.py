@@ -15,7 +15,7 @@ def test_happy_path_writes_env_file(tmp_path: Path) -> None:
     creds.write_text("{}", encoding="utf-8")
     config_dir = tmp_path / "config"
 
-    input_stream = io.StringIO(f"{watch}\nfolder-xyz\n{creds}\n")
+    input_stream = io.StringIO(f"{watch}\nfolder-xyz\n{creds}\n\n")
     output_stream = io.StringIO()
     input_stream.isatty = lambda: True  # type: ignore[method-assign]
 
@@ -29,6 +29,7 @@ def test_happy_path_writes_env_file(tmp_path: Path) -> None:
     assert f"WATCH_FOLDER={watch}" in contents
     assert "DRIVE_FOLDER_ID=folder-xyz" in contents
     assert f"GOOGLE_CREDENTIALS={creds}" in contents
+    assert "DELETE_AFTER_UPLOAD" not in contents
 
 
 def test_non_tty_raises_wizard_error(tmp_path: Path) -> None:
@@ -50,7 +51,7 @@ def test_invalid_watch_folder_path_retries(tmp_path: Path) -> None:
     config_dir = tmp_path / "config"
 
     input_stream = io.StringIO(
-        f"/this/path/does/not/exist\n{good_watch}\nfolder-xyz\n{creds}\n"
+        f"/this/path/does/not/exist\n{good_watch}\nfolder-xyz\n{creds}\n\n"
     )
     output_stream = io.StringIO()
     input_stream.isatty = lambda: True  # type: ignore[method-assign]
@@ -71,7 +72,7 @@ def test_invalid_credentials_path_retries(tmp_path: Path) -> None:
     config_dir = tmp_path / "config"
 
     input_stream = io.StringIO(
-        f"{watch}\nfolder-xyz\n/nope/missing.json\n{good_creds}\n"
+        f"{watch}\nfolder-xyz\n/nope/missing.json\n{good_creds}\n\n"
     )
     output_stream = io.StringIO()
     input_stream.isatty = lambda: True  # type: ignore[method-assign]
@@ -91,7 +92,7 @@ def test_empty_drive_folder_id_retries(tmp_path: Path) -> None:
     creds.write_text("{}", encoding="utf-8")
     config_dir = tmp_path / "config"
 
-    input_stream = io.StringIO(f"{watch}\n\nfolder-xyz\n{creds}\n")
+    input_stream = io.StringIO(f"{watch}\n\nfolder-xyz\n{creds}\n\n")
     output_stream = io.StringIO()
     input_stream.isatty = lambda: True  # type: ignore[method-assign]
 
@@ -111,7 +112,7 @@ def test_wizard_creates_config_dir_if_missing(tmp_path: Path) -> None:
     config_dir = tmp_path / "fresh-config"
     assert not config_dir.exists()
 
-    input_stream = io.StringIO(f"{watch}\nfolder-xyz\n{creds}\n")
+    input_stream = io.StringIO(f"{watch}\nfolder-xyz\n{creds}\n\n")
     output_stream = io.StringIO()
     input_stream.isatty = lambda: True  # type: ignore[method-assign]
 
@@ -136,7 +137,7 @@ def test_prepare_settings_first_run_runs_wizard(tmp_path: Path) -> None:
     creds = tmp_path / "creds.json"
     creds.write_text("{}", encoding="utf-8")
     config_dir = tmp_path / "config"
-    stdin, stdout = _make_streams(f"{watch}\nfolder-xyz\n{creds}\n")
+    stdin, stdout = _make_streams(f"{watch}\nfolder-xyz\n{creds}\n\n")
 
     from src.bootstrap.init_config import prepare_settings
 
@@ -146,6 +147,7 @@ def test_prepare_settings_first_run_runs_wizard(tmp_path: Path) -> None:
     assert settings.watch_folder == watch
     assert settings.drive_folder_id == "folder-xyz"
     assert settings.credentials_path == creds
+    assert settings.delete_after_upload is False
 
 
 def test_prepare_settings_skips_wizard_when_env_present(tmp_path: Path) -> None:
@@ -186,10 +188,65 @@ def test_prepare_settings_creates_missing_config_dir(tmp_path: Path) -> None:
     creds.write_text("{}", encoding="utf-8")
     config_dir = tmp_path / "fresh"
     assert not config_dir.exists()
-    stdin, stdout = _make_streams(f"{watch}\nfolder-xyz\n{creds}\n")
+    stdin, stdout = _make_streams(f"{watch}\nfolder-xyz\n{creds}\n\n")
 
     from src.bootstrap.init_config import prepare_settings
 
     prepare_settings(stdin, stdout, config_dir)
 
     assert config_dir.is_dir()
+
+
+def test_optional_delete_after_upload_yes_writes_env_var(tmp_path: Path) -> None:
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    creds = tmp_path / "creds.json"
+    creds.write_text("{}", encoding="utf-8")
+    config_dir = tmp_path / "config"
+
+    stdin, stdout = _make_streams(f"{watch}\nfolder-xyz\n{creds}\nyes\n")
+
+    from src.bootstrap.init_config import prepare_settings
+
+    settings = prepare_settings(stdin, stdout, config_dir)
+
+    contents = (config_dir / ".env").read_text(encoding="utf-8")
+    assert "DELETE_AFTER_UPLOAD=true" in contents
+    assert settings.delete_after_upload is True
+
+
+def test_optional_delete_after_upload_explicit_no_skips_env_var(tmp_path: Path) -> None:
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    creds = tmp_path / "creds.json"
+    creds.write_text("{}", encoding="utf-8")
+    config_dir = tmp_path / "config"
+
+    stdin, stdout = _make_streams(f"{watch}\nfolder-xyz\n{creds}\nn\n")
+
+    from src.bootstrap.init_config import prepare_settings
+
+    settings = prepare_settings(stdin, stdout, config_dir)
+
+    contents = (config_dir / ".env").read_text(encoding="utf-8")
+    assert "DELETE_AFTER_UPLOAD" not in contents
+    assert settings.delete_after_upload is False
+
+
+def test_optional_delete_after_upload_retries_on_invalid_input(tmp_path: Path) -> None:
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    creds = tmp_path / "creds.json"
+    creds.write_text("{}", encoding="utf-8")
+    config_dir = tmp_path / "config"
+
+    stdin, stdout = _make_streams(f"{watch}\nfolder-xyz\n{creds}\nmaybe\ny\n")
+
+    from src.bootstrap.init_config import prepare_settings
+
+    settings = prepare_settings(stdin, stdout, config_dir)
+
+    contents = (config_dir / ".env").read_text(encoding="utf-8")
+    assert "DELETE_AFTER_UPLOAD=true" in contents
+    assert "Please answer y or n." in stdout.getvalue()
+    assert settings.delete_after_upload is True
