@@ -54,7 +54,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          merge-multiple: true
 
       - name: Rename binaries and compute SHA256
         env:
@@ -62,12 +61,12 @@ jobs:
         run: |
           set -e
           cd artifacts
-          if [ -f drive-uploader-Linux/drive-uploader ]; then
-            mv drive-uploader-Linux/drive-uploader "drive-uploader-${VERSION}-linux-amd64"
-          fi
-          if [ -f drive-uploader-Windows/drive-uploader.exe ]; then
-            mv drive-uploader-Windows/drive-uploader.exe "drive-uploader-${VERSION}-windows-amd64.exe"
-          fi
+          find . -type f -name 'drive-uploader'
+          find . -type f -name 'drive-uploader.exe'
+          LINUX_BIN=$(find . -type f -name 'drive-uploader' -not -name '*.exe' | head -1)
+          WINDOWS_BIN=$(find . -type f -name 'drive-uploader.exe' | head -1)
+          [ -n "$LINUX_BIN" ] && mv "$LINUX_BIN" "drive-uploader-${VERSION}-linux-amd64"
+          [ -n "$WINDOWS_BIN" ] && mv "$WINDOWS_BIN" "drive-uploader-${VERSION}-windows-amd64.exe"
           sha256sum drive-uploader-${VERSION}-* > SHA256SUMS
           cat SHA256SUMS
 
