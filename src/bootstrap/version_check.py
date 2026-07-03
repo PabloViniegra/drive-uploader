@@ -7,7 +7,7 @@ import urllib.request
 from typing import Callable
 
 
-CURRENT_VERSION = "0.1.1"
+CURRENT_VERSION = "0.1.2"
 
 _RELEASES_URL = "https://api.github.com/repos/PabloViniegra/drive-uploader/releases/latest"
 _DOWNLOAD_URL = "https://github.com/PabloViniegra/drive-uploader/releases/latest"
